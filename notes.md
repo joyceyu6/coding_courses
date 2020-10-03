@@ -1805,8 +1805,6 @@ completed = subprocess.run(["python3", "other.py"],
     dimensions_inch = np.array([1, 2, 3])
     dimensions_cm = [x * 2.54 for x in dimensions_inch]
     ```
-* Building Web Applications w Django
-
 * command query sepration principle
 ```python
 # violation of command query separation principle
@@ -1821,9 +1819,806 @@ for row in range(1, 10):
 sheet.append([1, 2, 3])  # add after blank rows
 wb.save("transaction2.xlsx")
 ```
+* Building Web Applications w Django
+    * set up Django project
+    ```python
+    # set up Django project
+    '''build Vidly which list movie, genre, stock
+    https://xxx.herokuapp.com/api/movies return json
+    deploy to heroku'''
 
- 
- 
+    '''terminal:'''
+    mkdir vidly
+    cd vidly
+    pipenv install django == 2.1
+    pipenv shell #activate virtual env
+    django-admin startproject vidly . #create under current directory
+    '''now vidly-->vidly-->__init__.py, settings.py, urls.py, wsgi.py; vidly-->vidly, manage,py, Pipfile, Pipfile.lock'''
+
+    # urls.py define url endpoints for application
+    # wsgi.py web server gateway interface, standand interface between web apps and python
+    '''select python interpretor installed under the virtual environment'''
+    python3 manage.py runserver #standard port or add port option
+    '''navigate to webaddress or contl + c to exit
+    ```
+    * set up app - MVC vs. MTV in DJANGO
+    ```python
+    # set up app
+    '''terminal:'''
+    manage.py startapp movies # create movies directory
+    '''movies-->migrations folder, __init__.py, admin.py,apps.py(store configurations settings for the app),models.py,test.py, views.py'''
+    # Model View Controller - MVC
+    # Model Template View - DJANGO
+    # views.py: view function - take request and return response, aka Controller in MVC
+    # models.py: domains of apps such as movie/class/genre under movies
+    ```
+    * Views 
+    ```python
+    '''views.py:'''
+    from django.http import HttpResponse
+    from django.shortcuts.import render
+    # create your own views here
+    def indext(request):
+        return HttpResponse("Hellow World)
+    ```
+    ```python
+    '''create urls.py under movies'''
+    from django.urls import path
+    from . import views # impossible to use import views as it will import from path not views file
+
+    # movies/ dont care prefix such as movies_collection/
+    # movies/1/details
+    
+    # url configuration:
+    urlpatterns = [
+        path('',views.index,name='index') # next go to vidly-->urls.py, see next code block
+
+    ]
+    ```
+    ```python
+    '''go to vidly-->urls.py that defines url config for main app:'''
+    from django.contrib import admin
+    from django.urls import path, include
+
+    urlpatterns = [
+        path('admin/,admin.site.urls),
+        # any requests with prefix 'movies/'be chopped off prefix and route to movies.url under movies app:
+        path('movies/', include('movies.urls')) 
+    ]
+    ```
+    ```python
+    '''terminal:restart webserver'''
+    python3 manage.py runserver
+    '''show "hello world" if head over to /movies'''
+    ```
+    * Models
+    ```python
+    # create model classes
+    '''movies.py under movies app:'''
+    from django.db import models
+    class Genre(models.Model): # inherit Model class under models module
+        name = models.CharField(max_length=255)
+    
+    class Movie(models.Model):
+        title = models.CharField(max_length=255)
+        release_year = models.IntegerField()
+        number_in_stock = models.IntegerField()
+        daily_rate = models.FloatField()
+        genre = models.ForeignKey(Genre, on_delete=models.CASCADE) # relate to genre, and cascading - if genre deleted no movies either
+    ```
+    * Migrations - default sqlite3
+    ```python
+    '''search for db browser for sqlite and install'''
+    '''terminal:'''
+    python3 manage.py makemigrations # not registered
+    # register movies.app with DJANGO:
+    '''vidly-->settings.py add:'''
+    INSTALLED_APPS = [
+        'movies.apps.MoviesConfig' #register class under movies-->apps.py
+    ]
+    '''run one more time in terminal:"'''
+    python3 manage.py makemigrations #works now
+    '''run migration'''
+    python3 manage.py runserver # show unapplied migrations
+    '''interminal to end server:'''
+    Contrl + C
+    python3 manage.py migrate #run all pending migrations
+    '''open sqlite one more time and find 13 tables'''
+    ```
+    * Changing the Models
+    ```python
+    # create a new field of 'date_created'
+    '''models.py under vidly:'''
+    from django.utils import timezone
+    date_created = models.DateTimeField(default=timezone.now) #just method, not .now() otherwise current time will be hardcoded, need be calculated when insert new record
+    '''terminal:'''
+    manage.py makemigrations
+    python3 manage.py migrate
+    '''to see sql statement sent:'''
+    python3 manage.py sqlmigrate movies 0001
+    ```
+    * Admin
+    ```python
+    # admin panel
+    '''terminal:'''
+    python3 manage.py runserver
+    '''back to browser and head over to /admin:'''
+    # entrance to admin panel
+    '''open new terminal so not to stop server'''
+    python3 manage.py createsuperuser 
+    '''enter username and email address and password'''
+    '''back to login screen and login as super user'''
+    # can put users in different groups
+    ```
+    ```python
+    # add models to be used w admin interface
+    '''under vidly-->admin.py:'''
+    from django.contrib import admin
+    from .models imprt Genre, Movies
+
+    admin.site.register(Genre)
+    admin.site.register(Movie)
+    ```
+    * Customizing the Admin interface
+    ```python
+    # override __str__ method in Genre class so it won't show as 'Genre object(1)' instead show 'Genre'
+    '''movies app open models.py:'''
+    ...
+    class Genre(models.Model):
+        name = models.CharField(max_length=255)
+        #add below magic method
+        def __str__(self):
+            return self.name
+    '''back to Admin portal and refresh the page:'''
+    '''return actual name of the genre - Action instead of 'Genre object(1)'''
+    ```
+    ```python
+    # add column to see ID in Admin
+    '''admin.py under movies app:'''
+    from .models import Genre, Movies
+    # create another class called Genre Admin
+    class GenreAdmin(admin.ModelAdmin):
+        list_display=('id','name')
+
+        admin.site.register(Genre, GenreAdmin)# GenreAdmin also added/passed
+        admin.site.register(Movie)
+    '''refresh Admin, now show ID(auto generate) and Name'''
+    '''click into Movies to add movie'''   
+    ```
+    ```python
+    # hide columns
+    '''back to admin.py under movies app:'''
+    # create another class:
+    class MovieAdmin(admin.ModelAdmin):
+        fields = ('title','genre',)
+        exclude = ('date_created',) #add ',' as it should be tuple not string
+        # add three columns to movioes in Admin:
+        list_display = ('title','number_in_stock','daily_rate')
+    
+    admin.site.register(Movie, MovieAdmin) # add MovieAdmin
+    '''back to admion, date_created hidden'''
+    ```
+    * Database Abstraction API
+    ```python
+    '''in movies app open views.py module:'''
+    from .models import Movie
+
+    def index(request):
+        Movie.objects.all()
+        # SELECT * FROM movies_movie
+        Movie.objects.filter(release_year = 1984)
+        # SELECT * FROM movies_movie WHERE...
+        Movie.objects.get(id=1)
+    ```
+    ```python
+    # get all movies from database
+    def index(request):
+        movies = Movie.objects.all()
+        output = ','.join([m.title for m in movies])
+        return HttpResonse(output)
+    '''server /movies: return Terminator, Hangover'''
+    ```
+    * Templates - return html content from view functions
+    ```python
+    '''views.py:'''
+    from django.http import HttpResponse
+    from django.shortcuts import render #this
+    from .models import Movie
+
+    def index(request):
+        movies = Movie.objects.all()
+        # return HttpResponse(output) # not used, use below instead:
+        # below 3rd parameter is optional to pass data to template
+        return render(requst,'index.html',{'movies':movies}) # recommend create movies under templates folder and ref 'movies/index.html' instead, see 'Templates' section
+    ```
+    ```python
+    '''unmder movies app add new folder 'templates' that DJANGO looks for'''
+    '''templates-->index.html added:'''
+    <h1>hello world<h1>
+    '''change DJANGO html-->html'''
+    ```
+    ```html
+    # zen coding
+    <!-- in index.html -->
+    <!-- table.table>thead>tr>th*3 #press tab will generate below html -->
+    <table class = "table">
+        <thead>
+            <tr>
+                <th>Title</th>  
+                <th>Genre</th> 
+                <th>Stock</th>
+                <th>Daily Rate</th>  
+            </tr>
+        </thead>
+        <!-- tbody>tr>td*4 # press tab and generate below html -->
+        <tbody>
+            <!-- switch to django html, type in 'for' and tab, auto generate code snippet for loop -->
+            <!-- two special notations in Django html template: '{}" to execute logic, '{{}}' to render value  -->
+            {% for movie in movies %} 
+                <tr>
+                    <td>{{movie.title}}</td>
+                    <td>{{movie.genre}}</td>
+                    <td>{{movie.number_in_stock}}</td>
+                    <td>{{movie.daily_rate}}</td>
+                </tr>
+            {% endfor %}    
+        </tbody>
+    </table>
+    <!-- now open browser to /movies -->
+    ```
+    ```python
+    # istall pylint-django
+    '''pylint not familiar w DJANGO objects'''
+    '''in terminal:'''
+    pipenv install pylint-django
+    '''at root of project Vidly(first one) create .pylintrc:'''
+    load-plugins=pylint-django #now compilation error gone
+    ```
+    ```python
+    # how DJANGO search for a file:
+    '''settings.py:'''
+    INSTALLED_APPS=[
+        'django.contrib.admin',
+        'django.contrib.auth',
+        .....
+    ]
+    ```
+    ```python
+    # to avoid search for another app's index.html
+    '''under Movies-->templates-->movies create'''
+    '''move index.html into above folder'''
+    '''change views.py:'''
+    def index(request):
+        ...
+        return render(request,'movies/index.html')
+    ```
+    * Adding Bootstrap - CSS framework
+    ```html
+    <!-- getbootstrap.com->Documentation
+    copy 'template' from documentation
+    under templates->movies->base.html create:
+    paste starter template -->
+    <title> Vidly</title>
+    <body>
+    {% block content %}
+    {% endblock %}
+    ....
+    </body>
+    ```
+    ```html
+    <!-- index.html -->
+    {% extends 'movies/base.html' %} 
+    {% block content %}
+        <table class="table">
+        ...
+        </table>
+    {% endblock %}
+    <!-- now open browser to /movies -->
+    ```
+    * Customizing the Layout
+    ```html
+    <!-- copy 'Nvbar' from getbootstrap.com -->
+    <!-- back to base.html: -->
+    <body>
+        <!-- add navbar -->
+        <nav class = "navbar navbar-light bg-light">
+            <a class = "navbar-brand" href="#">Vidly</a>
+        </nav>
+        <!-- center content by creating container: -->
+        <main class="container">
+            {% block contet %}
+            {% endblock %}
+        </main>
+    ...
+    ```
+    ```html
+    <!-- add vertical border to table -->
+    <!-- index.html: -->
+    ...
+    {% block content %}
+        <!-- <table class="table"> -->
+        <table class="table table-bordered table-hover">
+    ```
+    * Sharing a Template Across Multiple Apps
+    ```python
+    '''create templates under root/vidly, drag base.html there'''
+    '''change prefix of index.html under movies'''
+    # fix issue: after drag base.html to root
+    '''go to vidly-->settings.py'''
+    TEMPLATES = [
+        {
+            'DIRS':[os.path.join(BASE_DIR,'templates')], # if not found here then search for APP_DIRs
+            'APP_DIRS': True,
+
+        }
+    ]
+    # now template can be shared across multiple apps
+    ```
+    * Url Parameters
+    ```python
+    # how to route to /movies/1
+    # easy fix if change to /old_system/movies/1 later
+
+    # urls.py in vidly route anything start w movies here after chopping prefix
+    # /movies/1
+    # /old_system/movies/1
+    '''urls.py under movies'''
+    ...
+    urlpatterns = [
+        path('',views.index, name = 'movies_index'),
+        # path('<movie_id>', views_detail, name = 'movies_detail'),
+        # make sure integer only for movie_id:
+        path('<int: movie_id>', views.detail, name = 'movies_detail') # name is useful if later change to /old_system/movies/1 can easily change in single place
+    ]
+    ```
+    ```python
+    '''views.py: add new function'''
+    def detail(request,movie_id):
+        return HttpResponse(movie_id) #placeholder, see next setion for single object
+    ```
+    * Getting a Single Object
+    ```python
+    '''views.py: add new function'''
+    def detail(request,movie_id):
+        Movie.objects.get(pk=movie_id) #or 'id'
+        return render(request,'movies/detail.html',{'movie':movie})
+    ```
+    ```html
+    <!-- templates->movies>detail.html create -->
+    <!-- change language to html, then change back -->
+    {% extend 'base.html' %}
+    {% block content %}
+    <!-- dl: description list
+    dt: term
+    dd: short description -->
+        <!-- dl > (dt + dd)*3 and tab -->
+        <dl>
+            <dt>Title</dt>
+            <dd>{{ movie.title }}</dd>
+            <dt>Genre</dt>
+            <dd>{{ movie.genre }}</dd>
+            <dt>Stock</dt>
+            <dd>{{ movie.number_in_stock }}</dd>
+        </dl>
+    (% endblock %)
+    <!-- can also render as a table -->
+    ```
+    * Raising 404 Errors
+    ```python
+    '''in views.py:'''
+    # Option 1
+    from django.http import HttpResponse, Http404 #added
+    def detail(request,movie_id):
+        try:
+            Movie.objects.get(pk=movie_id) #or 'id'
+            return render(request,'movies/detail.html',{'movie':movie})
+        except Movie.DoesNotExist # inherited from Model
+            raise Http404()
+    ```
+    ```python
+    # Option 2 - DJANGO's simplified way
+    from django.shortcuts import render, get_object_or_404 #add
+    def detail(request,movie_id):
+        Movie = get_object_or_404(Movie, pk=movie_id) #auto 404, need pass Model class 'Movie'
+        return render(request,'movies/detail.html',{'movie':movie}
+    ```
+    * Referencing Urls
+    ```html
+    <!-- Option 1: href, wont change if change to /old_system/movies/1 from /movies/1  -->
+        {% block content %}
+            <table class = "table">
+                <thead>
+                    <tr>
+                        <th>Title</th>  
+                        <th>Genre</th> 
+                        <th>Stock</th>
+                        <th>Daily Rate</th>  
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- two special notations in Django html template: '{}" to execute logic, '{{}}' to render value  -->
+                    {% for movie in movies %} 
+                        <tr>
+                            <td>
+                                <!-- changed from <td>{{movie.title}}</td>: -->
+                                <a href="/movies/{{ movie.id}}">{{movie.title}}</a>
+                            </td>
+                            <td>{{movie.genre}}</td>
+                            <td>{{movie.number_in_stock}}</td>
+                            <td>{{movie.daily_rate}}</td>
+                        </tr>
+                    {% endfor %}    
+                </tbody>
+            </table>
+        {% endblock %}
+    ```
+    ```html
+    <!-- Option 2 - better: in urls.py we named url to 'movies_detail'href, this will change if change to /old_system/movies/1 from /movies/1  -->
+                            <td>
+                                <!-- change prior: <a href="/movies/{{ movie.id}}">{{movie.title}}</a> -->
+                                <!-- and pass optional pararmeters 'movie.id' -->
+                                <a href="% url 'movies_detail' movie.id %}">{{movie.title}}</a> 
+                            </td>
+    ```
+    ```python
+    # option 3 - best:
+    '''urls.py: movies_index prefix is good practice, there is a better way'''
+    # Original code:
+    # urlpatterns = [
+    #     path('',views.index, name = 'movies_index'),
+    #     path('<int: movie_id>', views.detail, name = 'movies_detail')
+    # ]
+    ...
+    # new code:
+    app_name = 'movies' #added
+    urlpatterns = [
+        path('',views.index, name='index'),
+        path('<int:movie_id>',views.detail,name='detail') # change to detail
+    ]
+    ```
+    ```html
+    <!-- go back to index.html -->
+    <!-- ':' means app in DJANGO and url named 'detail' only when we set app_name to movies -->
+    <!-- <a href="% url 'movies_detail' movie.id %}">{{movie.title}}</a> -->
+    <a href="% url 'movies: detail' movie.id %}">{{movie.title}}</a>
+    ```
+    * create APIs
+    ```python
+    # step 1: install django-tastpie
+    # step 2: create a new app called api
+    # step 3: in that new app api - added new model that represents our movies resource
+    # step 4: register a new url pattern in urls.py in main app vidly
+    ```
+    ```python
+    '''django-tastypie - used below''' 
+    '''diangorestframework (drm)'''
+    '''terminal:'''
+    pipenv install django-tastypie
+    python3 manage.py startapp api #start a new django project called api
+    ```
+    ```python
+    '''go to settings in VS Code'''
+    INSTALLED_APPS = [
+        ...
+        'api.apps.APIConfig' #add 
+    ]
+    '''check settings correct: go to api folder-->apps.py:'''
+    from django.apps import AppConfig
+
+    class ApiConfig(AppConfig):
+        name = 'api'
+    ```
+    ```python
+    '''go to models.py:'''
+    # /api/movies  #url = uniform resource locator
+    # create movies resource:
+    from django.db import models
+    from tastypie.resources import ModelResource
+    from movies.models import Movie
+
+    class MovieResource(ModelResource):
+        class Meta: #define meta data of movies resource
+            queryset = Movie.objects.all() #returns a query - lasy object
+            resource_name = 'movies'#define how api looks like: /api/movies
+            excludes = ['date_created'] #excl. the property in /api/movies json
+    ```
+    ```python
+    # generate url endpoints
+    '''go to main vidly app: vidly-->urls.py:'''
+    ...
+    from api.models import MoieResource #added 
+
+    # movie_resource = MovieResource()
+    # movie_resource.urls # return url for movies resource we set up above in models.py
+
+    urlpatterns = [
+        path('admin/',admin.site.urls),
+        path('movies/',include('movies.urls')),
+        path('api/',include(movie_resource.urls)) #added
+    ]
+    '''return json when type in /api/movies in browser'''
+    ```
+    * adding the homepage
+    ```python
+    # fix issue: once add new url to urls.py, django stops display default home page
+    '''create vidly-->views.py:'''
+    from django.shortcuts import render
+    def home(request):
+        return render(request,'home.html')
+    ```
+    ```python
+    '''urls.py:'''
+    from . import views #added
+    urlpatterns = [
+        path('',views.home), # added
+        path('admin/',admin.site.urls),
+        path('movies/',include('movies.urls')),
+        path('api/',include(movie_resource.urls))
+    ]
+    ```
+    ```python
+    # option 1 register vidly-->vidly as app by adding to setting.py and create templates folder under vidly
+    # option 2 put homepage, content pages etc. under main app vidly-->templates folder
+    # option 2:
+    '''add main app vidly-->templates-->home.html:'''
+    {% extends 'base.html' %}
+    {% block content %}
+        <a href="{% url 'movies:index'%}">Movies</a>
+    {% endblock %}
+    ```
+    * getting ready to deploy
+    ```python
+    # GCP, AWS, Azure, Heroku etc.
+    # heroku.com:
+    '''create account, search for 'heroku cli' and download'''
+    '''go to 'git-scm.com' and download git'''
+    '''terminal:'''
+    git --version
+    heroku --version
+    pipenv install gunicorn #webserver
+    ```
+    ```python
+    '''at root of project vidly add new file Procfile:''' # heroku look at Procfile to start application
+    web: gunicorn vidly.wsgi # wsgi: webserver gateway interface
+    ```
+    ```python
+    '''admin interface has static files - bring static files to current project and deploy to heroku:'''
+    '''vidly-->vidly-->settings.py at bottom:'''
+    STATIC_URL = '/static/'
+    STATIC_ROOT = os.path.join(BASE_DIR,'static')# bring complete path of static
+    ```
+    ```python
+    '''terminal:'''
+    python3 manage.py collectstatic # copy all static to main app vidly-->static-->admin-->css etc. 
+    ```
+    ```python
+    '''install -heroku specific requirement - whitenoise:'''
+    pipenv install whitenoise
+    '''pypi.org search for whitenoise and find documentation using whitenoise w Django'''
+    ```
+    ```python
+    '''install midleware to server static files'''
+    '''settings.py:'''
+    MIDDLEWARE=[
+        ...
+        'whitenoise.middleware.WhiteNoiseMiddleware', #added
+    ]
+    ```
+    * deployment - heroku
+    ```python
+    '''create git, add and commit'''
+    git init
+    git add.
+    git commit -m "xxx"
+    ```
+    ```python
+    '''after git commit, terminal:'''
+    heroku login
+    heroku create # create new heroku app w unique address of the app
+    '''3 things heroku did: 
+    1. crate app at this address
+    2. create git repositiory
+    3. tell current local repositiory about this new remote repository
+    '''
+    git push heroku master # code pushed to heroku
+    # deployed to heroku, now tell heroku to allocate one webserver to this app
+    heroku ps:scale web=1
+    heroku open # open a webbrowser pointing to the app
+    ```
+    ```python
+    # fix problem:DisallowedHost : this error is to prevent http hostheader attack
+    '''open settings.py:'''
+    ALLOWED_HOSTS = [
+        'mighty-oasis-70406.herokuapp.com' # or some other string copied fr error msg
+    ]
+    ```
+    ```python
+    '''terminal:'''
+    gid add .
+    git commit - m "Add Heroku app to allowed hosts."
+    git push heroku master
+    '''refresh the page, works now'''
+    '''herokuapp.com/admin works now: log w same credentails and add new movie'''
+    '''/api/movies works too''' 
+    ```
+
+
+* Machine Learning with Python
+    * Steps:
+        * Import the Data
+        * Clean the Data
+        * Split the Data into Training/Test Sets
+        * Create a Model
+        * Train the Model
+        * Make Predictions
+        * Evaluate and Improve
+    
+    * Libararies: 
+        * Numpy: multi-dimentional array
+        * Pandas: data analysis library provide data frame that has rows, columns
+        * MatPlotLib: 2-dimentional library creating graphs and plots
+        * Scikit-Learn: common algorithm: decision trees, nero networks etc.
+    * Tools:
+        * [Anaconda](www.anaconda.com): download, will install Jypter, Scikit-Learn etc.
+        * Jypter
+        ```python
+        jupyter notebookd #auto open a browser window open localhost:888/tree - jupyter dashboard, by default point to home directory
+        ```
+        ```python
+        '''create new notebook w Python 3'''
+        '''change title of the notebook: xxx.ipynb will be saved'''
+        ```
+    * Importing a data set: 
+        * [kaggle](www.kaggle.com)
+        * create account
+        * search 'video game sales'
+        * sign in and download 'vgsales.csv' data set
+        * put it next to Jupyter notebook 
+            ```python
+            # so we can reference directly below
+            ```
+        * in Jupyter:
+            ```python
+            '''easily visulize data'''
+            import pandas as pd
+            df = pd.read_csv('vgsales.csv')
+            df.shape
+            ```
+            ```python
+            df.describe() # count, mean, std, min, 25%, 50%..for each field
+            df.values #two dimensional array: outer/inner array - pandas data frame
+            ```
+    * Jupyter Shotcuts
+        
+        * `Esc`: command mode(blue) not edit mode(green) 
+        * `h` when in Command Mode: show all keyboard shortcuts
+        * `command + shift + F`: open the command palette - Mac
+        * `b`: insert code line below; first cell in command mode
+        * `a`: insert code line above; command mode
+        * `d` twice: delete
+        * `Run` button: only execute code on that cell
+        * `Cell -->Run All`: run all cells together
+        * `shift + tab` describe method
+            ```python
+            df.describe()
+            ``` 
+        * `command + /` and `ctrl + /` in Windows to convert to comments
+        * `ctrl + enter` when in cell: run cell w/o adding new cell 
+    * A real Project: 
+        predict music preference w age and gender
+        * Preparing the Data: 
+        down load and put in same folder as jupyter [data set](http://bit.ly/music-csv) 
+        
+        ```python
+        import pandas as pd
+        music_data = pd.read_csv('music.csv')
+        music_data
+        ```
+        * Learning and Predicting:
+        ```python
+        X = music_data.drop(columns = ['genre']) # age, gender
+        # shift + tab see tooltip
+        y = music_data['genre'] # only answers/music type
+        ```
+        ```python
+         # import DecisionTreeClassifier class from tree module:
+        from sklearn.tree import DecisionTreeClassifier
+        model = DecisionTreeClassifier() # new instance
+        model.fit(X, y) # input, output 
+        # music_data # inspect data 
+        predictions = model.predict([[21,1],[22,0]])
+        predictions # inspect in note book
+        ```
+        * Calculating the Accuracy - split to trainig(70%-80%)/test (20%-30%)
+        ```python
+        import pandas as pd
+
+        from sklearn.tree import DecisionTreeClassifier
+        from sklearn.model_selection import train_test_split
+        from sklearn.metrics import accuracy_score # added
+
+        music_data = pd.read_csv('music.csv')
+        X = music_data.drop(columns = ['genre'])
+        y = music_data['genre']
+        X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.2)
+
+        model = DecisionTreeClassifier() 
+        model.fit(X_train,y_train)
+        predictions = model.predict(X_test)
+
+        score = accuracy_score(y_test,predictions)
+        score
+        # ctrl + enter to run cell
+        ```
+        * Persisting Models - save and load models
+        ```python
+        import pandas as pd
+        from sklearn.tree import DecisionTreeClassifier
+        from sklearn.externals import joblib # joblib object has methods for saving and loading models
+
+        music_data = pd.read_csv('music.csv')
+        X = music_data.drop(columns = ['genre'])
+        y = music_data['genre']
+
+        model = DecisionTreeClassifier() 
+        model.fit(X, y)
+
+        joblib.dump(model, 'music-recommender.joblib') # twow args, model and where to store
+        '''ctrl + / to run'''
+        '''return ['music-recommend.joblib'] saved as binary file'''
+        # predictions = model.predict([[21,1]])
+        * Visualizing a Decision Tree
+        ```
+        ```python
+        import pandas as pd
+        from sklearn.tree import DecisionTreeClassifier
+        from sklearn.externals import joblib
+
+        model = joblib.load('music-recommender.joblib')
+        predictions = model.predict([[21,1]])
+        predictions
+        ```
+    * Vidualizing a Decision Tree
+    ```python
+    import pandas as pd
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn import tree # tree
+
+    music_data = pd.read_csv('music_csv')
+    X = music_data.drop(columns = ['genre'])
+    y = music_data['genre']
+
+    model = DecisionTreeClassifier()
+    model.fit(X,y)
+
+    tree.export_graphviz(model,out_file = 'music-recommend.dot',
+                        feature_names=['age','gender']),
+                        class_names=sorted(y.unique()),
+                        label = 'all',
+                        rounded=True,
+                        filled=True)
+
+    '''music-recommender.dot to vs.code windown'''
+    '''install Graphviz(dot)language extension'''
+    '''open preview to the side'''
+    ```
+    * What to learn next
+
+        * Data Structures & Algorithms: This is a must for anyone wanting to work as a professional software engineer or anyone preparing for a coding interview. It teaches you problem-solving skills and how to implement fast and scalable algorithms.
+
+    I've created this course with Java but you can apply the same concepts in Python if you prefer. You just need to understand Java's syntax to watch the course. The syntax is fairly simple and you can quickly get up to speed by watching the first two hours of my Java Fundamentals course.
+
+    JavaScript Basics for Beginners: If you want to work as a full-stack developer, in addition to Python, you need to know JavaScript well. With Python you can build back-ends, with JavaScript you can build front-ends. A developer who knows both front-end and back-end development is called a full-stack developer.
+
+    Complete SQL Mastery: This course teaches you how to work with relational databases. You'll learn everything from designing databases to various querying and optimization techniques.
+        ```
+
+        
+
+
+
+
+
 
 
 ## Shortcut
