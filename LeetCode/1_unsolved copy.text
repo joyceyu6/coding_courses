@@ -1,0 +1,52 @@
+March to April,2019:
+1-372
+
+Easy/Medium bordering: 
+38 count-and-say, 
+107 Binary-tree-level-order, 
+189 Rotate Array
+198 House Robber
+
+
+Medium/Hard: 127 Word Ladder
+
+Revisit: 
+Binary Tree 114,116,117; 
+130 surround-regions; 
+151 Reverse Words in a String
+166 Fraction to Recurring Decimal  
+220 Contains Duplicate III 
+368 Largest Divisible Subset
+
+Unsolved:
+5 Longest Palindromic Substring
+16 3Sum Closest
+18 4Sum   
+129 Sum Root to Leaf Numbers
+138 Copy List with Random Pointer
+142 Linked List Cycle II
+146 LRU Cache
+173 binary-search-tree-iterator
+201 Bitwise AND of Numbers Range
+220 contains-dupliate-iii
+221 maximal-square(timeout)
+223 rectangle-area
+227 basic-calculator-ii
+275 h-index-ii
+289 game of life
+307 range-sum-query-mutable
+310 min-height-trees
+322 coin-change
+1081 smallest Subsequence of distinct characters(ref 316)
+331 verify preorder serialization of a binary tree
+341 flatten-nested-list-iterator
+371 Sum of Two Integers (copy answers)
+372 Super PoW (copy answers)
+
+
+
+
+
+
+
+
